@@ -12,7 +12,11 @@ export const useAssignedLab = () => {
     api.get("/labs").then((r) => {
       const found = id
         ? r.data.find((l) => l.id === Number(id))
-        : r.data.find((l) => l.assistant_id === user.id);
+        : r.data.find((l) =>
+            user.role === "INCHARGE"
+              ? l.incharge_id === user.id
+              : l.assistant_id === user.id
+          );
       setLab(found || null);
     });
   }, [user, id]);

@@ -133,8 +133,6 @@ export default function Login() {
           <div className="mt-6 pt-5 text-xs space-y-1" style={{ borderTop: "1px solid var(--crce-border-solid)", color: "var(--crce-text-muted)" }}>
             <div className="font-bold uppercase tracking-wider text-[10px] mb-2" style={{ color: "var(--crce-primary)" }}>Test accounts</div>
             <div>admin@crce.edu / Admin@123</div>
-            <div>assistant@crce.edu / Assistant@123</div>
-            <div>student@crce.edu / Student@123</div>
           </div>
         </div>
       </div>

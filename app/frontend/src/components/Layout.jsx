@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, FlaskConical, Users, BarChart3, LogOut,
@@ -6,9 +6,6 @@ import {
 } from "lucide-react";
 import Chatbot from "@/components/Chatbot";
 import { useParams } from "react-router-dom";
-
-
-
 
 const NAVS = {
   ADMIN: [
@@ -24,10 +21,10 @@ const NAVS = {
   ],
 };
 
-
 const roleColor = (role) => ({
   ADMIN:     "bg-teal-500/20 text-teal-300 border-teal-500/30",
   ASSISTANT: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+  INCHARGE:  "bg-purple-500/20 text-purple-300 border-purple-500/30",
   STUDENT:   "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
 }[role] || "bg-white/10 text-white/60 border-white/20");
 
@@ -35,9 +32,12 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
-  const labBase = id ? `/assistant/labs/${id}` : "/assistant";
-  const navs = user?.role === "ASSISTANT" ? [
-    { to: "/assistant/labs", label: "My Labs", icon: FlaskConical },
+
+  const rolePrefix = user?.role === "INCHARGE" ? "incharge" : "assistant";
+  const labBase = id ? `/${rolePrefix}/labs/${id}` : `/${rolePrefix}`;
+
+  const navs = (user?.role === "ASSISTANT" || user?.role === "INCHARGE") ? [
+    { to: `/${rolePrefix}/labs`, label: "My Labs", icon: FlaskConical },
     { to: labBase, label: "Dashboard", icon: LayoutDashboard, end: true },
     { to: `${labBase}/equipment`, label: "Equipment", icon: Beaker },
     { to: `${labBase}/requests`, label: "Requests", icon: ClipboardList },

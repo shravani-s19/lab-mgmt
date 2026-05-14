@@ -2,10 +2,14 @@ import { useAssignedLabs } from "@/lib/use-assigned-labs";
 import Layout from "@/components/Layout";
 import { PageHeader, EmptyState } from "@/components/ui-kit";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AssistantLabs() {
   const labs = useAssignedLabs();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const basePath = user?.role === "INCHARGE" ? "/incharge" : "/assistant";
 
   return (
     <Layout>
@@ -18,8 +22,7 @@ export default function AssistantLabs() {
             <div
               key={lab.id}
               className="crce-card p-5 cursor-pointer hover:shadow-md transition"
-              onClick={() => navigate(`/assistant/labs/${lab.id}`)}
-            >
+              onClick={() => navigate(`${basePath}/labs/${lab.id}`)}            >
               <div className="font-display font-bold text-lg">{lab.name}</div>
               <div className="text-sm text-[#64748B] mt-1">{lab.location}</div>
               <div className="text-sm text-[#64748B]">{lab.department || "General"}</div>

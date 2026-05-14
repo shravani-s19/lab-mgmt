@@ -14,7 +14,7 @@ from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
-from db import init_main_db, main_db, lab_db, init_lab_db, lab_db_path, migrate_equipment_columns
+from db import init_main_db, main_db, lab_db, init_lab_db, lab_db_path, migrate_equipment_columns, migrate_lab_columns
 from auth import (
     hash_password,
     verify_password,
@@ -69,7 +69,8 @@ class LabCreate(BaseModel):
     budget: float = 0
     department: Optional[str] = None
     assistant_id: Optional[int] = None
-
+    incharge_name: Optional[str] = None  # ADD THIS
+    incharge_id: Optional[int] = None
 
 class LabBudgetUpdate(BaseModel):
     budget: float
@@ -120,11 +121,19 @@ class ChatReq(BaseModel):
     message: str
     session_id: Optional[str] = None
 
+class AssistantCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    department: Optional[str] = None
+    role: Optional[str] = "ASSISTANT"
+
 
 @app.on_event("startup")
 def _startup():
     init_main_db()
-    migrate_equipment_columns()  # ADD THIS
+    migrate_equipment_columns()
+    migrate_lab_columns()  # ADD THIS
     run_seed()
 
 
@@ -175,22 +184,22 @@ def me(user: dict = Depends(get_current_user)):
 
 
 @api.post("/admin/create-assistant")
-def create_assistant(req: CreateAssistantReq, _admin: dict = Depends(require_role("ADMIN"))):
+def create_assistant(body: AssistantCreate, _admin: dict = Depends(require_role("ADMIN"))):
+    role = getattr(body, "role", "ASSISTANT") or "ASSISTANT"
+    if role not in ("ASSISTANT", "INCHARGE"):
+        role = "ASSISTANT"
     with main_db() as conn:
-        if conn.execute("SELECT 1 FROM users WHERE email = ?", (req.email,)).fetchone():
-            raise HTTPException(status_code=400, detail="Email already exists")
-        cur = conn.execute(
-            "INSERT INTO users (email, password_hash, name, role, department) VALUES (?, ?, ?, 'ASSISTANT', ?)",
-            (req.email, hash_password(req.password), req.name, req.department),
+        conn.execute(
+            "INSERT INTO users (email, password_hash, name, role, department) VALUES (?, ?, ?, ?, ?)",
+            (body.email, hash_password(body.password), body.name, role, body.department),
         )
-    return {"id": cur.lastrowid, "email": req.email, "name": req.name, "role": "ASSISTANT"}
-
+    return {"ok": True}
 
 @api.get("/admin/assistants")
 def list_assistants(_admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         rows = conn.execute(
-            "SELECT id, email, name, department FROM users WHERE role = 'ASSISTANT' ORDER BY id"
+            "SELECT id, email, name, role, department FROM users WHERE role IN ('ASSISTANT','INCHARGE') ORDER BY id"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -208,8 +217,13 @@ def list_users(_admin: dict = Depends(require_role("ADMIN"))):
 def list_labs(user: dict = Depends(get_current_user)):
     with main_db() as conn:
         rows = conn.execute(
-            "SELECT l.*, u.name AS assistant_name FROM labs l "
-            "LEFT JOIN users u ON u.id = l.assistant_id ORDER BY l.id"
+            "SELECT l.id, l.name, l.location, l.capacity, l.budget, l.department, "
+            "l.db_name, l.assistant_id, l.incharge_id, l.created_at, "
+            "u.name AS assistant_name, i.name AS incharge_name "
+            "FROM labs l "
+            "LEFT JOIN users u ON u.id = l.assistant_id "
+            "LEFT JOIN users i ON i.id = l.incharge_id "
+            "ORDER BY l.id"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -218,10 +232,14 @@ def list_labs(user: dict = Depends(get_current_user)):
 def get_lab(lab_id: int, user: dict = Depends(get_current_user)):
     with main_db() as conn:
         row = conn.execute(
-            "SELECT l.*, u.name AS assistant_name FROM labs l "
-            "LEFT JOIN users u ON u.id = l.assistant_id WHERE l.id = ?",
-            (lab_id,),
-        ).fetchone()
+            "SELECT l.id, l.name, l.location, l.capacity, l.budget, l.department, "
+            "l.db_name, l.assistant_id, l.incharge_id, l.created_at, "
+            "u.name AS assistant_name, i.name AS incharge_name "
+            "FROM labs l "
+            "LEFT JOIN users u ON u.id = l.assistant_id "
+            "LEFT JOIN users i ON i.id = l.incharge_id "
+            "ORDER BY l.id"
+        ).fetchall()
     if not row:
         raise HTTPException(status_code=404, detail="Lab not found")
     return dict(row)
@@ -231,9 +249,9 @@ def get_lab(lab_id: int, user: dict = Depends(get_current_user)):
 def create_lab(req: LabCreate, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.execute(
-            "INSERT INTO labs (name, location, capacity, budget, department, db_name, assistant_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (req.name, req.location, req.capacity, req.budget, req.department, "pending", req.assistant_id),
+            "INSERT INTO labs (name, location, capacity, budget, department, db_name, assistant_id, incharge_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (req.name, req.location, req.capacity, req.budget, req.department, "pending", req.assistant_id, req.incharge_id),
         )
         lab_id = cur.lastrowid
         conn.execute("UPDATE labs SET db_name = ? WHERE id = ?", (f"lab_{lab_id}.sqlite", lab_id))
@@ -259,6 +277,23 @@ def assign_assistant(lab_id: int, req: LabAssignAssistant, _admin: dict = Depend
         conn.execute("UPDATE labs SET assistant_id = ? WHERE id = ?", (req.assistant_id, lab_id))
     return {"id": lab_id, "assistant_id": req.assistant_id}
 
+class LabAssignIncharge(BaseModel):
+    incharge_id: int
+
+@api.put("/admin/labs/{lab_id}/assign-incharge")
+def assign_incharge(lab_id: int, req: LabAssignIncharge, _admin: dict = Depends(require_role("ADMIN"))):
+    with main_db() as conn:
+        u = conn.execute(
+            "SELECT id FROM users WHERE id = ? AND role = 'INCHARGE'",
+            (req.incharge_id,)
+        ).fetchone()
+        if not u:
+            raise HTTPException(status_code=400, detail="Incharge user not found")
+        conn.execute(
+            "UPDATE labs SET incharge_id = ? WHERE id = ?",
+            (req.incharge_id, lab_id)
+        )
+    return {"id": lab_id, "incharge_id": req.incharge_id}
 
 @api.delete("/admin/labs/{lab_id}")
 def delete_lab(lab_id: int, _admin: dict = Depends(require_role("ADMIN"))):
@@ -362,15 +397,17 @@ def export_lab_registry(lab_id: int, _admin: dict = Depends(require_role("ADMIN"
                              headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 def _ensure_assistant_for_lab(lab_id: int, user: dict):
+    with main_db() as conn:
+        lab = conn.execute("SELECT * FROM labs WHERE id = ?", (lab_id,)).fetchone()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
     if user["role"] == "ADMIN":
         return
-    if user["role"] != "ASSISTANT":
-        raise HTTPException(status_code=403, detail="Only the lab's assistant can perform this action")
-    with main_db() as conn:
-        row = conn.execute("SELECT assistant_id FROM labs WHERE id = ?", (lab_id,)).fetchone()
-    if not row or row["assistant_id"] != user["id"]:
-        raise HTTPException(status_code=403, detail="You are not assigned to this lab")
-
+    if user["role"] == "INCHARGE" and lab["incharge_id"] == user["id"]:
+        return
+    if user["role"] == "ASSISTANT" and lab["assistant_id"] == user["id"]:
+        return
+    raise HTTPException(status_code=403, detail="Not your lab")
 
 @api.get("/labs/{lab_id}/equipment")
 def list_equipment(lab_id: int, user: dict = Depends(get_current_user)):
@@ -636,6 +673,3 @@ async def chatbot(req: ChatReq, user: dict = Depends(get_current_user)):
 
 
 app.include_router(api)
-if __name__ == "__main__":
-    import uvicorn, os
-    uvicorn.run("server:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

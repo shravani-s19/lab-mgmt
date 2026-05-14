@@ -56,7 +56,7 @@ def init_main_db():
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 name TEXT NOT NULL,
-                role TEXT NOT NULL CHECK(role IN ('ADMIN','ASSISTANT','STUDENT')),
+                role TEXT NOT NULL CHECK(role IN ('ADMIN','ASSISTANT','STUDENT','INCHARGE')),
                 roll_no TEXT,
                 department TEXT,
                 year TEXT,
@@ -74,6 +74,19 @@ def init_main_db():
                 created_at TEXT DEFAULT (datetime('now')),
                 FOREIGN KEY (assistant_id) REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS labs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    location TEXT NOT NULL,
+    capacity INTEGER NOT NULL DEFAULT 0,
+    budget REAL NOT NULL DEFAULT 0,
+    department TEXT,
+    db_name TEXT NOT NULL,
+    assistant_id INTEGER,
+    incharge_name TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (assistant_id) REFERENCES users(id)
+);
             """
         )
 
@@ -122,6 +135,7 @@ def init_lab_db(lab_id: int):
                 completed_at TEXT,
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id)
             );
+            
             """
         )
 
@@ -141,3 +155,11 @@ def migrate_equipment_columns():
             except sqlite3.OperationalError:
                 pass
         conn.close()
+
+def migrate_lab_columns():
+    with main_db() as conn:
+        for col, typedef in [("incharge_name", "TEXT"), ("incharge_id", "INTEGER")]:
+            try:
+                conn.execute(f"ALTER TABLE labs ADD COLUMN {col} {typedef}")
+            except:
+                pass

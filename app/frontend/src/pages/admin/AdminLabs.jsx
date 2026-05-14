@@ -9,7 +9,7 @@ export default function AdminLabs() {
   const [labs, setLabs] = useState([]);
   const [assistants, setAssistants] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", location: "", capacity: 30, budget: 100000, department: "", assistant_id: "" });
+  const [form, setForm] = useState({ name: "", location: "", capacity: 30, budget: 100000, department: "", assistant_id: "", incharge_id: "" });
   const [err, setErr] = useState("");
 
   const load = async () => {
@@ -21,9 +21,13 @@ export default function AdminLabs() {
   const submit = async (e) => {
     e.preventDefault(); setErr("");
     try {
-      await api.post("/admin/labs", { ...form, assistant_id: form.assistant_id ? Number(form.assistant_id) : null });
+      await api.post("/admin/labs", { 
+        ...form, 
+        assistant_id: form.assistant_id ? Number(form.assistant_id) : null,
+        incharge_id: form.incharge_id ? Number(form.incharge_id) : null
+      });
       setShowForm(false);
-      setForm({ name: "", location: "", capacity: 30, budget: 100000, department: "", assistant_id: "" });
+      setForm({ name: "", location: "", capacity: 30, budget: 100000, department: "", assistant_id: "", incharge_id: "" });
       load();
     } catch (e) { setErr(e?.response?.data?.detail || "Failed to create lab"); }
   };
@@ -33,12 +37,28 @@ export default function AdminLabs() {
     await api.delete(`/admin/labs/${id}`); load();
   };
 
-  const assign = async (lab) => {
-    const aid = window.prompt("Assistant ID to assign:", lab.assistant_id || "");
-    if (!aid) return;
-    await api.put(`/admin/labs/${lab.id}/assign-assistant`, { assistant_id: Number(aid) });
-    load();
-  };
+const assign = async (lab) => {
+  const inchargeUsers = assistants.filter(a => a.role === "INCHARGE");
+  const options = inchargeUsers.map(a => `${a.id}: ${a.name}`).join("\n") || "No incharge users found";
+  const aid = window.prompt(
+    `Assistant ID to assign:\n(Assistants: ${assistants.filter(a=>a.role==="ASSISTANT").map(a=>`${a.id}:${a.name}`).join(", ")})`,
+    lab.assistant_id || ""
+  );
+  if (!aid) return;
+  await api.put(`/admin/labs/${lab.id}/assign-assistant`, { assistant_id: Number(aid) });
+  load();
+};
+
+const assignIncharge = async (lab) => {
+  const inchargeList = assistants.filter(a => a.role === "INCHARGE");
+  const aid = window.prompt(
+    `Incharge ID to assign:\n(Incharge users: ${inchargeList.map(a=>`${a.id}:${a.name}`).join(", ")})`,
+    lab.incharge_id || ""
+  );
+  if (!aid) return;
+  await api.put(`/admin/labs/${lab.id}/assign-incharge`, { incharge_id: Number(aid) });
+  load();
+};
 
   const setBudget = async (lab) => {
     const v = window.prompt("New budget (₹):", lab.budget);
@@ -84,7 +104,7 @@ const exportRegistry = async (lab) => {
   URL.revokeObjectURL(url);
 };
 
-  return (
+return (
     <Layout>
       <PageHeader
         title="Labs"
@@ -100,10 +120,21 @@ const exportRegistry = async (lab) => {
           <div><label className="crce-label">Budget (₹)</label><input type="number" min={0} value={form.budget} onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })} className="crce-input" /></div>
           <div><label className="crce-label">Department</label><input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} className="crce-input" /></div>
           <div>
-            <label className="crce-label">Assign Assistant (optional)</label>
+            <label className="crce-label">Lab Assistant (optional)</label>
             <select value={form.assistant_id} onChange={(e) => setForm({ ...form, assistant_id: e.target.value })} className="crce-input">
               <option value="">— None —</option>
-              {assistants.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.email})</option>)}
+              {assistants.filter(a => a.role === "ASSISTANT").map((a) => (
+                <option key={a.id} value={a.id}>{a.name} ({a.email})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="crce-label">Lab Incharge (optional)</label>
+            <select value={form.incharge_id} onChange={(e) => setForm({ ...form, incharge_id: e.target.value })} className="crce-input">
+              <option value="">— None —</option>
+              {assistants.filter(a => a.role === "INCHARGE").map((a) => (
+                <option key={a.id} value={a.id}>{a.name} ({a.email})</option>
+              ))}
             </select>
           </div>
           {err && <div className="md:col-span-2 text-sm text-[#EF4444] bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
@@ -130,16 +161,23 @@ const exportRegistry = async (lab) => {
               <div className="flex items-center gap-2"><Wallet size={14} /> ₹{lab.budget?.toLocaleString()}</div>
               <div className="text-xs font-mono text-[#94A3B8]">{lab.db_name}</div>
             </div>
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <div>
-                <div className="text-[#64748B] text-xs">Assistant</div>
-                <div className="font-medium">{lab.assistant_name || <span className="text-[#94A3B8]">Unassigned</span>}</div>
+            <div className="mt-4 space-y-2 text-sm border-t border-[#F1F5F9] pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[#64748B] text-xs">Lab Incharge</div>
+                  <div className="font-medium">{lab.incharge_name || <span className="text-[#94A3B8]">Not set</span>}</div>
+                </div>
+                <div>
+                  <div className="text-[#64748B] text-xs">Assistant</div>
+                  <div className="font-medium">{lab.assistant_name || <span className="text-[#94A3B8]">Unassigned</span>}</div>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <button onClick={() => assign(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Assign</button>
+              <div className="flex gap-1 flex-wrap">
                 <button onClick={() => setBudget(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Budget</button>
                 <button onClick={() => importRegistry(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Import</button>
                 <button onClick={() => exportRegistry(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Export</button>
+                <button onClick={() => assign(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Set Assistant</button>
+                <button onClick={() => assignIncharge(lab)} className="crce-btn-secondary !py-1.5 !px-3 text-xs">Set Incharge</button>
               </div>
             </div>
           </div>

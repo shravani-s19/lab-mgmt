@@ -19,10 +19,11 @@ import StudentLabDetail from "@/pages/student/StudentLabDetail";
 import StudentBorrowed from "@/pages/student/StudentBorrowed";
 import Landing from "@/pages/Landing";
 
+
 const RootRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="p-10 text-[#64748B]">Loading…</div>;
-  if (user) return <Navigate to={roleHome(user.role)} replace />;
+  // if (user) return <Navigate to={roleHome(user.role)} replace />;
   return <Landing />;
 };
 
@@ -52,6 +53,13 @@ function App() {
             <Route path="/student/labs" element={<RequireAuth roles={["STUDENT"]}><StudentLabs /></RequireAuth>} />
             <Route path="/student/labs/:id" element={<RequireAuth roles={["STUDENT"]}><StudentLabDetail /></RequireAuth>} />
             <Route path="/student/borrowed" element={<RequireAuth roles={["STUDENT"]}><StudentBorrowed /></RequireAuth>} />
+
+            <Route path="/incharge" element={<RequireAuth roles={["INCHARGE"]}><AssistantLabs /></RequireAuth>} />
+<Route path="/incharge/labs" element={<RequireAuth roles={["INCHARGE"]}><AssistantLabs /></RequireAuth>} />
+<Route path="/incharge/labs/:id" element={<RequireAuth roles={["INCHARGE"]}><AssistantDashboard /></RequireAuth>} />
+<Route path="/incharge/labs/:id/equipment" element={<RequireAuth roles={["INCHARGE"]}><AssistantEquipment /></RequireAuth>} />
+<Route path="/incharge/labs/:id/requests" element={<RequireAuth roles={["INCHARGE"]}><AssistantRequests /></RequireAuth>} />
+<Route path="/incharge/labs/:id/maintenance" element={<RequireAuth roles={["INCHARGE"]}><AssistantMaintenance /></RequireAuth>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -12,5 +12,6 @@ export const RequireAuth = ({ children, roles }) => {
 export const roleHome = (role) => {
   if (role === "ADMIN") return "/admin";
   if (role === "ASSISTANT") return "/assistant";
+  if (role === "INCHARGE") return "/incharge";
   return "/student";
 };

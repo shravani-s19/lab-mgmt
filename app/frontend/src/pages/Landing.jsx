@@ -32,6 +32,12 @@ const Icon = ({ name, size = 22, color = "currentColor" }) => {
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     ),
+    incharge: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    ),
     assistant: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -180,7 +186,8 @@ export default function Landing() {
   ];
 
   const roles = [
-    { role: "Admin", icon: "admin", desc: "Create labs, assign assistants, manage budgets, and view analytics.", color: "#0d9488", bg: "rgba(13,148,136,0.07)", border: "rgba(13,148,136,0.25)", iconBg: "rgba(13,148,136,0.15)" },
+    { role: "Admin", icon: "admin", desc: "Create labs, assign assistants, manage budgets, and view analytics.", color: "#6366f1", bg: "rgba(99,102,241,0.07)", border: "rgba(99,102,241,0.25)", iconBg: "rgba(99,102,241,0.15)" },
+    { role: "Lab Incharge", icon: "incharge", desc: "Manage equipment, approve requests, and log maintenance across assigned labs.", color: "#0891b2", bg: "rgba(8,145,178,0.07)", border: "rgba(8,145,178,0.25)", iconBg: "rgba(8,145,178,0.15)" },
     { role: "Assistant", icon: "assistant", desc: "Manage equipment, approve requests, and log maintenance across assigned labs.", color: "#0891b2", bg: "rgba(8,145,178,0.07)", border: "rgba(8,145,178,0.25)", iconBg: "rgba(8,145,178,0.15)" },
     { role: "Student", icon: "student", desc: "Browse labs, request equipment, and track borrowed items easily.", color: "#6366f1", bg: "rgba(99,102,241,0.07)", border: "rgba(99,102,241,0.25)", iconBg: "rgba(99,102,241,0.15)" },
   ];
@@ -321,7 +328,7 @@ export default function Landing() {
             animation: "fadeUp 0.7s ease 0.4s both",
             boxShadow: "0 8px 32px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
           }}>
-            {[["5+","Labs"],["500+","Equipment"],["3","Roles"],["Real-time","Tracking"]].map(([num, label], i, arr) => (
+            {[["5+","Labs"],["500+","Equipment"],["4","Roles"],["Real-time","Tracking"]].map(([num, label], i, arr) => (
               <div key={label} className="stat-item" style={{
                 flex: 1, padding: "1.15rem 0.75rem", textAlign: "center",
                 borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none",
@@ -351,7 +358,7 @@ export default function Landing() {
           </div>
         </Reveal>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 18, maxWidth: 860, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, maxWidth: 860, margin: "0 auto" }}>
           {features.map((f, i) => (
             <Reveal key={f.name} delay={i * 80} direction="up">
               <div className="feature-card" style={{
@@ -396,11 +403,11 @@ export default function Landing() {
               display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
               textTransform: "uppercase", color: "#14b8a6", marginBottom: "0.6rem",
             }}>Roles</div>
-            <div style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "#0f2b35", letterSpacing: "-0.5px" }}>One system, three roles</div>
+            <div style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "#0f2b35", letterSpacing: "-0.5px" }}>One system, four roles</div>
           </div>
         </Reveal>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, maxWidth: 740, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(200px, 1fr))", gap: 16, maxWidth: 960, margin: "0 auto" }}>
           {roles.map((r, i) => (
             <Reveal key={r.role} delay={i * 100} direction="up">
               <div className="role-card" style={{

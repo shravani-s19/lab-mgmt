@@ -7,7 +7,7 @@ import { UserPlus } from "lucide-react";
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [show, setShow] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", department: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", department: "", role: "ASSISTANT" });
   const [err, setErr] = useState("");
 
   const load = () => api.get("/admin/users").then((r) => setUsers(r.data));
@@ -17,11 +17,11 @@ export default function AdminUsers() {
     e.preventDefault(); setErr("");
     try {
       await api.post("/admin/create-assistant", form);
-      setShow(false); setForm({ name: "", email: "", password: "", department: "" }); load();
+      setShow(false); setForm({ name: "", email: "", password: "", department: "", role: "ASSISTANT"}); load();
     } catch (e) { setErr(e?.response?.data?.detail || "Failed"); }
   };
 
-  return (
+return (
     <Layout>
       <PageHeader
         title="Users & Assistants"
@@ -35,10 +35,19 @@ export default function AdminUsers() {
           <div><label className="crce-label">Email</label><input data-testid="asst-email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="crce-input" /></div>
           <div><label className="crce-label">Password</label><input data-testid="asst-password" type="password" minLength={6} required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="crce-input" /></div>
           <div><label className="crce-label">Department</label><input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} className="crce-input" /></div>
+          <div>
+            <label className="crce-label">Role</label>
+            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="crce-input">
+              <option value="ASSISTANT">Lab Assistant</option>
+              <option value="INCHARGE">Lab Incharge</option>
+            </select>
+          </div>
           {err && <div className="md:col-span-2 text-sm text-[#EF4444] bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
           <div className="md:col-span-2 flex gap-2 justify-end">
             <button type="button" onClick={() => setShow(false)} className="crce-btn-secondary">Cancel</button>
-            <button data-testid="asst-submit" type="submit" className="crce-btn-primary">Create Assistant</button>
+            <button data-testid="asst-submit" type="submit" className="crce-btn-primary">
+              Create {form.role === "INCHARGE" ? "Incharge" : "Assistant"}
+            </button>
           </div>
         </form>
       )}
@@ -60,7 +69,11 @@ export default function AdminUsers() {
               <tr key={u.id} className="border-t border-[#E2E8F0]" data-testid={`user-row-${u.id}`}>
                 <td className="py-3 px-5 font-medium">{u.name}</td>
                 <td className="py-3 px-5 text-[#64748B]">{u.email}</td>
-                <td className="py-3 px-5"><Badge tone={u.role === "ADMIN" ? "blue" : u.role === "ASSISTANT" ? "green" : "amber"}>{u.role}</Badge></td>
+                <td className="py-3 px-5">
+                  <Badge tone={u.role === "ADMIN" ? "blue" : u.role === "ASSISTANT" ? "green" : u.role === "INCHARGE" ? "blue" : "amber"}>
+                    {u.role}
+                  </Badge>
+                </td>
                 <td className="py-3 px-5">{u.department || "—"}</td>
                 <td className="py-3 px-5">{u.roll_no || "—"}</td>
                 <td className="py-3 px-5">{u.year || "—"}</td>

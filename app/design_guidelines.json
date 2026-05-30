@@ -1,0 +1,111 @@
+{
+  "project_name": "CRCE Lab Manager — Enhanced System (v2)",
+  "theme": "light",
+  "archetype": "Soft Utility (Archetype 4 Hybrid)",
+  "design_philosophy": "A frictionless, highly functional, and modern institutional system. Prioritizes data legibility and operational clarity through a strict grid layout, generous internal padding, and a precise color system. Relies on crisp typography and subtle micro-interactions to create a 'trustworthy yet modern' feel without being overly clinical.",
+  "colors": {
+    "background": "#F8FAFC",
+    "cards": "#FFFFFF",
+    "primary": "#2563EB",
+    "primary_hover": "#1D4ED8",
+    "accent": "#22C55E",
+    "warning": "#F59E0B",
+    "danger": "#EF4444",
+    "text_main": "#1E293B",
+    "text_muted": "#64748B",
+    "border": "#E2E8F0",
+    "status_available": "#22C55E",
+    "status_issued": "#EF4444",
+    "status_maintenance": "#F59E0B"
+  },
+  "typography": {
+    "fonts": {
+      "headings": "Cabinet Grotesk, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tight leading-none text-[#1E293B]",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-[#1E293B]",
+      "h3": "text-xl sm:text-2xl font-semibold tracking-tight text-[#1E293B]",
+      "h4": "text-lg font-medium text-[#1E293B]",
+      "body": "text-base font-normal leading-relaxed text-[#1E293B]",
+      "body_sm": "text-sm font-normal text-[#64748B]",
+      "label": "text-xs font-bold uppercase tracking-[0.15em] text-[#64748B]"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing & Bento Grids. Follows 'Control Room' grid strategies for dashboards.",
+    "containers": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "card_padding": "p-6 md:p-8",
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+    "border_radius": {
+      "cards": "rounded-2xl",
+      "buttons": "rounded-xl",
+      "inputs": "rounded-lg"
+    }
+  },
+  "components": {
+    "cards": {
+      "base": "bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm transition-all duration-300",
+      "hover": "hover:shadow-md hover:-translate-y-1"
+    },
+    "buttons": {
+      "primary": "bg-gradient-to-r from-[#2563EB] to-blue-500 text-white font-medium rounded-xl px-6 py-2.5 transition-all duration-300 shadow-sm hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-[#2563EB]/50 focus:outline-none",
+      "secondary": "bg-white text-[#1E293B] border border-[#E2E8F0] font-medium rounded-xl px-6 py-2.5 transition-all duration-200 hover:bg-[#F8FAFC] hover:border-blue-200 focus:ring-2 focus:ring-[#E2E8F0]"
+    },
+    "progress_bars": {
+      "base": "h-2 w-full bg-[#E2E8F0] rounded-full overflow-hidden",
+      "available": "bg-[#22C55E]",
+      "issued": "bg-[#EF4444]",
+      "maintenance": "bg-[#F59E0B]"
+    },
+    "chatbot": {
+      "trigger": "fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-r from-[#2563EB] to-blue-500 shadow-lg hover:scale-110 transition-transform flex items-center justify-center text-white z-50",
+      "panel": "fixed bottom-24 right-6 w-80 md:w-96 max-h-[600px] bg-white/95 backdrop-blur-xl border border-[#E2E8F0] rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 origin-bottom-right transition-all"
+    },
+    "navbar": "sticky top-0 z-40 w-full backdrop-blur-xl bg-white/80 border-b border-[#E2E8F0] h-16 flex items-center justify-between px-6",
+    "sidebar": "fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-[#E2E8F0] flex flex-col pt-16 transition-transform"
+  },
+  "motion": {
+    "hover_elements": "transition-all duration-300 ease-out",
+    "list_stagger": "framer-motion staggered fade-in up",
+    "micro_interactions": {
+      "button_click": "active:scale-95",
+      "card_hover": "hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+    }
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "weight": "duotone"
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/e8160823-3d2c-4edc-bbaf-fd8e24bfde8c/images/a3da0dcd5dd9b628c8a5ba24152bec681014a764b5a0b69a63c36a0066194cf0.png",
+      "description": "Abstract minimalist 3D geometric background in soft blue and white for the login page to create a modern SaaS feel."
+    },
+    "laboratory_equipment": {
+      "url": "https://images.pexels.com/photos/15290006/pexels-photo-15290006.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Microscopes in a clean university laboratory, useful for empty states or lab detail pages."
+    },
+    "computer_lab": {
+      "url": "https://images.pexels.com/photos/18471488/pexels-photo-18471488.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Clean, modern computer lab setup for lab catalog cover images."
+    },
+    "student_avatar": {
+      "url": "https://images.unsplash.com/photo-1544717305-2782549b5136?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwyfHxzdHVkZW50JTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc3NDU5MDg4fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Smiling student holding a folder, useful for profile placeholders or onboarding."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the user's explicit hex codes. Do NOT use standard Tailwind blue-500 for primary if it doesn't match #2563EB exactly (configure tailwind config).",
+    "Ensure all components are built using React and .js files (not TypeScript).",
+    "Use Shadcn UI for complex interactives (Dialog, Select, DropdownMenu, Tabs, Toast via Sonner) to ensure accessibility.",
+    "Do NOT use the default Shadcn Card component for the dashboard widgets if it restricts layout; build custom HTML/Tailwind cards using the guidelines above (rounded-2xl, specific hover states).",
+    "For all interactive elements (buttons, links, form inputs) and key data points, YOU MUST add a role-based 'data-testid' attribute (e.g., data-testid='submit-login-button').",
+    "Implement the Chatbot panel using Framer Motion for a smooth slide-up effect from the trigger button.",
+    "For charts in the analytics dashboard, use Recharts with colors matching the system palette (Primary Blue, Accent Green, Warning Amber).",
+    "Ensure optical alignment inside data tables (left-align text, right-align numbers/metrics).",
+    "Respect generous spacing rules - dashboard widgets must not look cluttered. Use p-6 inside widget containers."
+  ]
+}

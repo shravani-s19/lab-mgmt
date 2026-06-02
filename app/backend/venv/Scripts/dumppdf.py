@@ -1,4 +1,4 @@
-#!C:\Users\shaus\Desktop\frcrce\sem 4\wt\mgmt\app\backend\venv\Scripts\python.exe
+#!C:\Users\shaus\Desktop\frcrce\sem4\wt\mgmt\app\backend\venv\Scripts\python.exe
 """Extract pdf structure in XML format"""
 
 import logging

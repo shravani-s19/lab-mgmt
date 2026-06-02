@@ -64,8 +64,8 @@ Guidelines:
 - Address the user as {user_name}"""
 
     response = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=512,
+        model="claude-opus-4-8",
+        max_tokens=1024,
         system=system_prompt,
         messages=[{"role": "user", "content": message}]
     )

@@ -93,8 +93,7 @@ function ProfileModal({ onClose }) {
   const tabs = [
     { id: "profile", label: "Profile", icon: UserCircle },
     { id: "password", label: "Password", icon: Lock },
-    ...(user?.role !== "ADMIN" ? [{ id: "security", label: "Security Questions", icon: ShieldQuestion }] : []),
-  ];
+    { id: "security", label: "Security Questions", icon: ShieldQuestion },  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4"

@@ -2,6 +2,7 @@ import os
 import anthropic
 from db import main_db, lab_db, dict_rows
 
+import asyncio
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 def _build_context():
@@ -63,11 +64,11 @@ Guidelines:
 - If asked something outside lab management, politely redirect
 - Address the user as {user_name}"""
 
-    response = client.messages.create(
-        model="claude-opus-4-8",
-        max_tokens=1024,
+    response = await asyncio.to_thread(
+        client.messages.create,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
         system=system_prompt,
         messages=[{"role": "user", "content": message}]
     )
-
     return response.content[0].text

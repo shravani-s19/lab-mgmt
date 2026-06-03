@@ -1,9 +1,10 @@
 import os
-import anthropic
+import asyncio
+import google.generativeai as genai
 from db import main_db, lab_db, dict_rows
 
-import asyncio
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 def _build_context():
     try:
@@ -45,7 +46,7 @@ def _build_context():
 async def chat_reply(session_id, message, user_name="Student"):
     context = _build_context()
 
-    system_prompt = f"""You are CRCE Bot, the helpful assistant for CRCE Lab Manager system at Fr. Conceicao Rodrigues College of Engineering (FRCRCE).
+    prompt = f"""You are CRCE Bot, the helpful assistant for CRCE Lab Manager system at Fr. Conceicao Rodrigues College of Engineering (FRCRCE).
 
 You help students, assistants, and admins with:
 - Finding which lab has specific equipment
@@ -62,13 +63,11 @@ Guidelines:
 - If equipment is not available say so clearly
 - For requests, tell students to go to Browse Labs, select the lab, and request equipment
 - If asked something outside lab management, politely redirect
-- Address the user as {user_name}"""
+- Address the user as {user_name}
+
+User message: {message}"""
 
     response = await asyncio.to_thread(
-        client.messages.create,
-        model="claude-haiku-4-5-20251001",
-        max_tokens=512,
-        system=system_prompt,
-        messages=[{"role": "user", "content": message}]
+        model.generate_content, prompt
     )
-    return response.content[0].text
+    return response.text

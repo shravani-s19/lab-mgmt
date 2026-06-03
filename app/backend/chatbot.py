@@ -4,7 +4,7 @@ import google.generativeai as genai
 from db import main_db, lab_db, dict_rows
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 def _build_context():
     try:

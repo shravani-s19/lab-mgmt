@@ -45,7 +45,8 @@ def _build_context():
 
 async def chat_reply(session_id, message, user_name="Student"):
     context = _build_context()
-
+    print(f"[chatbot] GEMINI_API_KEY set: {bool(os.getenv('GEMINI_API_KEY'))}")
+    print(f"[chatbot] context length: {len(context)}")
     prompt = f"""You are CRCE Bot, the helpful assistant for CRCE Lab Manager system at Fr. Conceicao Rodrigues College of Engineering (FRCRCE).
 
 You help students, assistants, and admins with:
@@ -66,8 +67,11 @@ Guidelines:
 - Address the user as {user_name}
 
 User message: {message}"""
-
-    response = await asyncio.to_thread(
-        model.generate_content, prompt
-    )
-    return response.text
+    try:
+        response = await asyncio.to_thread(
+            model.generate_content, prompt
+        )
+        return response.text
+    except Exception as e:
+        print(f"[chatbot] Error: {type(e).__name__}: {e}")
+        return f"Bot Error: {str(e)}"

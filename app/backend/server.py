@@ -1,4 +1,4 @@
-""""CRCE Lab Manager — FastAPI backend with SQLite multi-database architecture."""
+""""CRCE Lab Manager — FastAPI backend with PostgreSQL / Supabase architecture."""
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -166,7 +166,7 @@ def _startup():
         ).fetchall()
 
     for lab in labs:
-        init_lab_db(lab["id"])
+        init_lab_db(lab[0])
 
     # 4. Migrate equipment tables
     migrate_equipment_columns()
@@ -184,12 +184,12 @@ def root():
 def signup(req: SignupReq):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM users WHERE email = ?", (req.email,))
+        cur.execute("SELECT 1 FROM users WHERE email = %s", (req.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="Email already registered")
         cur.execute(
             "INSERT INTO users (email, password_hash, name, role, roll_no, department, year, security_q1, security_a1, security_q2, security_a2) "
-            "VALUES (?, ?, ?, 'STUDENT', ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "VALUES (%s, %s, %s, 'STUDENT', %s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (req.email, hash_password(req.password), req.name, req.roll_no, req.department, req.year,
              req.security_q1, req.security_a1.strip().lower(), req.security_q2, req.security_a2.strip().lower()),
         )
@@ -208,7 +208,7 @@ def login(req: LoginReq):
     with main_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, email, password_hash, name, role, roll_no, department, year FROM users WHERE email = ?",
+            "SELECT id, email, password_hash, name, role, roll_no, department, year FROM users WHERE email = %s",
             (req.email,),
         )
         row = dict_row(cur, cur.fetchone())
@@ -242,27 +242,27 @@ class SetSecurityQuestionsReq(BaseModel):
 @api.put("/users/me")
 def update_profile(req: UpdateProfileReq, user: dict = Depends(get_current_user)):
     fields, values = [], []
-    if req.name is not None: fields.append("name = ?"); values.append(req.name)
-    if req.department is not None: fields.append("department = ?"); values.append(req.department)
-    if req.year is not None: fields.append("year = ?"); values.append(req.year)
-    if req.roll_no is not None: fields.append("roll_no = ?"); values.append(req.roll_no)
+    if req.name is not None: fields.append("name = %s"); values.append(req.name)
+    if req.department is not None: fields.append("department = %s"); values.append(req.department)
+    if req.year is not None: fields.append("year = %s"); values.append(req.year)
+    if req.roll_no is not None: fields.append("roll_no = %s"); values.append(req.roll_no)
     if not fields:
         raise HTTPException(status_code=400, detail="Nothing to update")
     values.append(user["id"])
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", values)
+        cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = %s", values)
     return {"message": "Profile updated"}
 
 @api.put("/users/me/password")
 def change_password(req: ChangePasswordReq, user: dict = Depends(get_current_user)):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT password_hash FROM users WHERE id = ?", (user["id"],))
+        cur.execute("SELECT password_hash FROM users WHERE id = %s", (user["id"],))
         row = dict_row(cur, cur.fetchone())
         if not verify_password(req.old_password, row["password_hash"]):
             raise HTTPException(status_code=400, detail="Current password is incorrect")
-        cur.execute("UPDATE users SET password_hash = ? WHERE id = ?",
+        cur.execute("UPDATE users SET password_hash = %s WHERE id = %s",
                      (hash_password(req.new_password), user["id"]))
     return {"message": "Password changed successfully"}
 
@@ -271,7 +271,7 @@ def set_security_questions(req: SetSecurityQuestionsReq, user: dict = Depends(ge
     with main_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            "UPDATE users SET security_q1=?, security_a1=?, security_q2=?, security_a2=? WHERE id=?",
+            "UPDATE users SET security_q1=%s, security_a1=%s, security_q2=%s, security_a2=%s WHERE id=%s",
             (req.security_q1, req.security_a1.strip().lower(),
              req.security_q2, req.security_a2.strip().lower(), user["id"])
         )
@@ -281,7 +281,7 @@ def set_security_questions(req: SetSecurityQuestionsReq, user: dict = Depends(ge
 def security_questions_status(user: dict = Depends(get_current_user)):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT security_q1 FROM users WHERE id = ?", (user["id"],))
+        cur.execute("SELECT security_q1 FROM users WHERE id = %s", (user["id"],))
         row = dict_row(cur, cur.fetchone())
     return {"has_security_questions": bool(row and row["security_q1"])}
 
@@ -289,7 +289,7 @@ def security_questions_status(user: dict = Depends(get_current_user)):
 def get_security_questions(email: str):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT security_q1, security_q2 FROM users WHERE email = ?", (email,))
+        cur.execute("SELECT security_q1, security_q2 FROM users WHERE email = %s", (email,))
         row = dict_row(cur, cur.fetchone())
     if not row or not row["security_q1"]:
         raise HTTPException(status_code=404, detail="No security questions found for this account")
@@ -299,7 +299,7 @@ def get_security_questions(email: str):
 def reset_password(body: ResetPasswordRequest):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT security_a1, security_a2 FROM users WHERE email = ?", (body.email,))
+        cur.execute("SELECT security_a1, security_a2 FROM users WHERE email = %s", (body.email,))
         row = dict_row(cur, cur.fetchone())
         if not row:
             raise HTTPException(status_code=404, detail="Account not found")
@@ -311,7 +311,7 @@ def reset_password(body: ResetPasswordRequest):
         if len(body.new_password) < 6:
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         new_hash = hash_password(body.new_password)
-        cur.execute("UPDATE users SET password_hash = ? WHERE email = ?", (new_hash, body.email))
+        cur.execute("UPDATE users SET password_hash = %s WHERE email = %s", (new_hash, body.email))
     return {"message": "Password reset successful"}
 
 @api.post("/admin/create-assistant")
@@ -322,7 +322,7 @@ def create_assistant(body: AssistantCreate, _admin: dict = Depends(require_role(
     with main_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO users (email, password_hash, name, role, department) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO users (email, password_hash, name, role, department) VALUES (%s, %s, %s, %s, %s)",
             (body.email, hash_password(body.password), body.name, role, body.department),
         )
     return {"ok": True}
@@ -339,13 +339,13 @@ def list_assistants(_admin: dict = Depends(require_role("ADMIN"))):
 def delete_user(user_id: int, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT role FROM users WHERE id = ?", (user_id,))
+        cur.execute("SELECT role FROM users WHERE id = %s", (user_id,))
         row = dict_row(cur, cur.fetchone())
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
         if row["role"] == "ADMIN":
             raise HTTPException(status_code=403, detail="Cannot delete admin")
-        cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
     return {"deleted": user_id}
 
 @api.get("/admin/users")
@@ -385,7 +385,7 @@ def get_lab(lab_id: int, user: dict = Depends(get_current_user)):
             "FROM labs l "
             "LEFT JOIN users u ON u.id = l.assistant_id "
             "LEFT JOIN users i ON i.id = l.incharge_id "
-            "WHERE l.id = ?", (lab_id,)
+            "WHERE l.id = %s", (lab_id,)
         )
         row = dict_row(cur, cur.fetchone())
     if not row:
@@ -399,11 +399,11 @@ def create_lab(req: LabCreate, _admin: dict = Depends(require_role("ADMIN"))):
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO labs (name, location, capacity, budget, department, db_name, assistant_id, incharge_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
             (req.name, req.location, req.capacity, req.budget, req.department, "pending", req.assistant_id, req.incharge_id),
         )
         lab_id = cur.fetchone()[0]
-        cur.execute("UPDATE labs SET db_name = ? WHERE id = ?", (f"lab_{lab_id}", lab_id))
+        cur.execute("UPDATE labs SET db_name = %s WHERE id = %s", (f"lab_{lab_id}", lab_id))
     init_lab_db(lab_id)
     return {"id": lab_id, "name": req.name, "db_name": f"lab_{lab_id}"}
 
@@ -412,10 +412,10 @@ def create_lab(req: LabCreate, _admin: dict = Depends(require_role("ADMIN"))):
 def set_lab_budget(lab_id: int, req: LabBudgetUpdate, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("SELECT 1 FROM labs WHERE id = %s", (lab_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Lab not found")
-        cur.execute("UPDATE labs SET budget = ? WHERE id = ?", (req.budget, lab_id))
+        cur.execute("UPDATE labs SET budget = %s WHERE id = %s", (req.budget, lab_id))
     return {"id": lab_id, "budget": req.budget}
 
 
@@ -423,10 +423,10 @@ def set_lab_budget(lab_id: int, req: LabBudgetUpdate, _admin: dict = Depends(req
 def assign_assistant(lab_id: int, req: LabAssignAssistant, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE id = ? AND role = 'ASSISTANT'", (req.assistant_id,))
+        cur.execute("SELECT id FROM users WHERE id = %s AND role = 'ASSISTANT'", (req.assistant_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=400, detail="Assistant not found")
-        conn.execute("UPDATE labs SET assistant_id = ? WHERE id = ?", (req.assistant_id, lab_id))
+        conn.execute("UPDATE labs SET assistant_id = %s WHERE id = %s", (req.assistant_id, lab_id))
     return {"id": lab_id, "assistant_id": req.assistant_id}
 
 class LabAssignIncharge(BaseModel):
@@ -436,17 +436,17 @@ class LabAssignIncharge(BaseModel):
 def assign_incharge(lab_id: int, req: LabAssignIncharge, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE id = ? AND role = 'INCHARGE'", (req.incharge_id,))
+        cur.execute("SELECT id FROM users WHERE id = %s AND role = 'INCHARGE'", (req.incharge_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=400, detail="Incharge user not found")
-        cur.execute("UPDATE labs SET incharge_id = ? WHERE id = ?", (req.incharge_id, lab_id))
+        cur.execute("UPDATE labs SET incharge_id = %s WHERE id = %s", (req.incharge_id, lab_id))
     return {"id": lab_id, "incharge_id": req.incharge_id}
 
 @api.delete("/admin/labs/{lab_id}")
 def delete_lab(lab_id: int, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("DELETE FROM labs WHERE id = %s", (lab_id,))
     return {"deleted": lab_id}
 
 @api.post("/admin/labs/{lab_id}/import-registry")
@@ -507,7 +507,7 @@ async def import_registry(lab_id: int, file: UploadFile = File(...), _admin: dic
         for r in rows:
             cur.execute(
                 f"INSERT INTO equipment_{lab_id} (name, total_qty, available_qty, cost, purchase_date, supplier_name, serial_no, remarks, status) "
-                f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AVAILABLE')",
+                f"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'AVAILABLE')",
                 (r["name"], r["total_qty"], r["total_qty"], r["cost"],
                  r["purchase_date"], r["supplier_name"], r["serial_no"], r["remarks"])
             )
@@ -517,7 +517,7 @@ async def import_registry(lab_id: int, file: UploadFile = File(...), _admin: dic
 def export_lab_registry(lab_id: int, _admin: dict = Depends(require_role("ADMIN"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("SELECT * FROM labs WHERE id = %s", (lab_id,))
         lab = dict_row(cur, cur.fetchone())
     if not lab:
         raise HTTPException(status_code=404, detail="Lab not found")
@@ -546,7 +546,7 @@ def export_lab_registry(lab_id: int, _admin: dict = Depends(require_role("ADMIN"
 def _ensure_assistant_for_lab(lab_id: int, user: dict):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("SELECT * FROM labs WHERE id = %s", (lab_id,))
         lab = dict_row(cur, cur.fetchone())
     if not lab:
         raise HTTPException(status_code=404, detail="Lab not found")
@@ -562,7 +562,7 @@ def _ensure_assistant_for_lab(lab_id: int, user: dict):
 def list_equipment(lab_id: int, user: dict = Depends(get_current_user)):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("SELECT 1 FROM labs WHERE id = %s", (lab_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Lab not found")
     with lab_db(lab_id) as conn:
@@ -579,11 +579,11 @@ def add_equipment(lab_id: int, req: EquipmentCreate, user: dict = Depends(get_cu
         cur = conn.cursor()
         cur.execute(
             f"INSERT INTO equipment_{lab_id} (name, category, description, total_qty, available_qty, cost, status) "
-            f"VALUES (?, ?, ?, ?, ?, ?, 'AVAILABLE') RETURNING id",
+            f"VALUES (%s, %s, %s, %s, %s, %s, 'AVAILABLE') RETURNING id",
             (req.name, req.category, req.description, req.total_qty, req.total_qty, req.cost),
         )
         eid = cur.fetchone()[0]
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (eid,))
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (eid,))
         row = dict_row(cur, cur.fetchone())
     return row
 
@@ -596,7 +596,7 @@ def update_equipment(lab_id: int, eid: int, req: EquipmentUpdate, user: dict = D
         raise HTTPException(status_code=400, detail="No fields to update")
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (eid,))
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (eid,))
         existing = dict_row(cur, cur.fetchone())
         if not existing:
             raise HTTPException(status_code=404, detail="Equipment not found")
@@ -605,10 +605,10 @@ def update_equipment(lab_id: int, eid: int, req: EquipmentUpdate, user: dict = D
             new_total = max(fields["total_qty"], issued)
             fields["total_qty"] = new_total
             fields["available_qty"] = max(0, new_total - issued)
-        sets = ", ".join(f"{k} = ?" for k in fields.keys())
+        sets = ", ".join(f"{k} = %s" for k in fields.keys())
         vals = list(fields.values()) + [eid]
-        cur.execute(f"UPDATE equipment_{lab_id} SET {sets} WHERE id = ?", vals)
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (eid,))
+        cur.execute(f"UPDATE equipment_{lab_id} SET {sets} WHERE id = %s", vals)
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (eid,))
         row = dict_row(cur, cur.fetchone())
     return dict(row)
 
@@ -618,7 +618,7 @@ def delete_equipment(lab_id: int, eid: int, user: dict = Depends(get_current_use
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"DELETE FROM equipment_{lab_id} WHERE id = ?", (eid,))
+        cur.execute(f"DELETE FROM equipment_{lab_id} WHERE id = %s", (eid,))
     return {"deleted": eid}
 
 
@@ -626,12 +626,12 @@ def delete_equipment(lab_id: int, eid: int, user: dict = Depends(get_current_use
 def create_request(lab_id: int, req: RequestCreate, user: dict = Depends(require_role("STUDENT"))):
     with main_db() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM labs WHERE id = ?", (lab_id,))
+        cur.execute("SELECT 1 FROM labs WHERE id = %s", (lab_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Lab not found")
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (req.equipment_id,))
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (req.equipment_id,))
         eq = dict_row(cur, cur.fetchone())
         if not eq:
             raise HTTPException(status_code=404, detail="Equipment not found")
@@ -639,11 +639,11 @@ def create_request(lab_id: int, req: RequestCreate, user: dict = Depends(require
             raise HTTPException(status_code=400, detail="Not enough quantity available")
         cur.execute(
             f"INSERT INTO requests_{lab_id} (equipment_id, student_id, student_name, student_email, quantity, purpose, status) "
-            f"VALUES (?, ?, ?, ?, ?, ?, 'PENDING') RETURNING id",
+            f"VALUES (%s, %s, %s, %s, %s, %s, 'PENDING') RETURNING id",
             (req.equipment_id, user["id"], user["name"], user["email"], req.quantity, req.purpose),
         )
         rid = cur.fetchone()[0]
-        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = ?", (rid,))
+        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = %s", (rid,))
         row = dict_row(cur, cur.fetchone())
     return row
 
@@ -655,7 +655,7 @@ def list_requests(lab_id: int, user: dict = Depends(get_current_user)):
         if user["role"] == "STUDENT":
             cur.execute(
                 f"SELECT r.*, e.name AS equipment_name FROM requests_{lab_id} r "
-                f"LEFT JOIN equipment_{lab_id} e ON e.id = r.equipment_id WHERE r.student_id = ? ORDER BY r.id DESC",
+                f"LEFT JOIN equipment_{lab_id} e ON e.id = r.equipment_id WHERE r.student_id = %s ORDER BY r.id DESC",
                 (user["id"],),
             )
         else:
@@ -672,23 +672,23 @@ def approve_request(lab_id: int, rid: int, user: dict = Depends(get_current_user
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = ?", (rid,))
+        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = %s", (rid,))
         r = dict_row(cur, cur.fetchone())
         if not r:
             raise HTTPException(status_code=404, detail="Request not found")
         if r["status"] != "PENDING":
             raise HTTPException(status_code=400, detail="Request not pending")
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (r["equipment_id"],))
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (r["equipment_id"],))
         eq = dict_row(cur, cur.fetchone())
         if eq["available_qty"] < r["quantity"]:
             raise HTTPException(status_code=400, detail="Not enough available")
         due = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
         cur.execute(
-            f"UPDATE requests_{lab_id} SET status = 'ISSUED', approved_at = CURRENT_TIMESTAMP, due_date = ? WHERE id = ?",
+            f"UPDATE requests_{lab_id} SET status = 'ISSUED', approved_at = CURRENT_TIMESTAMP, due_date = %s WHERE id = %s",
             (due, rid),
         )
         cur.execute(
-            f"UPDATE equipment_{lab_id} SET available_qty = available_qty - ? WHERE id = ?",
+            f"UPDATE equipment_{lab_id} SET available_qty = available_qty - %s WHERE id = %s",
             (r["quantity"], r["equipment_id"]),
         )
     return {"id": rid, "status": "ISSUED", "due_date": due}
@@ -699,11 +699,11 @@ def reject_request(lab_id: int, rid: int, user: dict = Depends(get_current_user)
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = ?", (rid,))
+        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = %s", (rid,))
         r = dict_row(cur, cur.fetchone())
         if not r or r["status"] != "PENDING":
             raise HTTPException(status_code=400, detail="Cannot reject")
-        cur.execute(f"UPDATE requests_{lab_id} SET status = 'REJECTED' WHERE id = ?", (rid,))
+        cur.execute(f"UPDATE requests_{lab_id} SET status = 'REJECTED' WHERE id = %s", (rid,))
     return {"id": rid, "status": "REJECTED"}
 
 
@@ -712,15 +712,15 @@ def return_request(lab_id: int, rid: int, user: dict = Depends(get_current_user)
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = ?", (rid,))
+        cur.execute(f"SELECT * FROM requests_{lab_id} WHERE id = %s", (rid,))
         r = dict_row(cur, cur.fetchone())
         if not r or r["status"] != "ISSUED":
             raise HTTPException(status_code=400, detail="Not an issued request")
         cur.execute(
-            f"UPDATE requests_{lab_id} SET status = 'RETURNED', returned_at = CURRENT_TIMESTAMP WHERE id = ?", (rid,)
+            f"UPDATE requests_{lab_id} SET status = 'RETURNED', returned_at = CURRENT_TIMESTAMP WHERE id = %s", (rid,)
         )
         cur.execute(
-            f"UPDATE equipment_{lab_id} SET available_qty = available_qty + ? WHERE id = ?",
+            f"UPDATE equipment_{lab_id} SET available_qty = available_qty + %s WHERE id = %s",
             (r["quantity"], r["equipment_id"]),
         )
     return {"id": rid, "status": "RETURNED"}
@@ -743,15 +743,15 @@ def add_maintenance(lab_id: int, req: MaintenanceCreate, user: dict = Depends(ge
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = ?", (req.equipment_id,))
+        cur.execute(f"SELECT * FROM equipment_{lab_id} WHERE id = %s", (req.equipment_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Equipment not found")
         cur.execute(
-            f"INSERT INTO maintenance_{lab_id} (equipment_id, description, cost, status) VALUES (?, ?, ?, 'IN_PROGRESS') RETURNING id",
+            f"INSERT INTO maintenance_{lab_id} (equipment_id, description, cost, status) VALUES (%s, %s, %s, 'IN_PROGRESS') RETURNING id",
             (req.equipment_id, req.description, req.cost),
         )
         mid = cur.fetchone()[0]
-        cur.execute(f"UPDATE equipment_{lab_id} SET status = 'MAINTENANCE' WHERE id = ?", (req.equipment_id,))
+        cur.execute(f"UPDATE equipment_{lab_id} SET status = 'MAINTENANCE' WHERE id = %s", (req.equipment_id,))
     return {"id": mid, "status": "IN_PROGRESS"}
 
 
@@ -760,14 +760,14 @@ def complete_maintenance(lab_id: int, mid: int, user: dict = Depends(get_current
     _ensure_assistant_for_lab(lab_id, user)
     with lab_db(lab_id) as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT * FROM maintenance_{lab_id} WHERE id = ?", (mid,))
+        cur.execute(f"SELECT * FROM maintenance_{lab_id} WHERE id = %s", (mid,))
         m = dict_row(cur, cur.fetchone())
         if not m:
             raise HTTPException(status_code=404, detail="Not found")
         cur.execute(
-            f"UPDATE maintenance_{lab_id} SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = ?", (mid,)
+            f"UPDATE maintenance_{lab_id} SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = %s", (mid,)
         )
-        cur.execute(f"UPDATE equipment_{lab_id} SET status = 'AVAILABLE' WHERE id = ?", (m["equipment_id"],))
+        cur.execute(f"UPDATE equipment_{lab_id} SET status = 'AVAILABLE' WHERE id = %s", (m["equipment_id"],))
     return {"id": mid, "status": "COMPLETED"}
 
 
@@ -785,7 +785,7 @@ def my_borrowed(user: dict = Depends(require_role("STUDENT"))):
                 cur.execute(
                     f"SELECT r.*, e.name AS equipment_name FROM requests_{lab['id']} r "
                     f"LEFT JOIN equipment_{lab['id']} e ON e.id = r.equipment_id "
-                    f"WHERE r.student_id = ? ORDER BY r.id DESC",
+                    f"WHERE r.student_id = %s ORDER BY r.id DESC",
                     (user["id"],),
                 )
                 rows = dict_rows(cur, cur.fetchall())

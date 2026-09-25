@@ -64,7 +64,7 @@ def get_current_user(
     with main_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, email, name, role, roll_no, department, year FROM users WHERE id = ?",
+            "SELECT id, email, name, role, roll_no, department, year FROM users WHERE id = %s",
             (user_id,),
         )
         cols = [d[0] for d in cur.description]

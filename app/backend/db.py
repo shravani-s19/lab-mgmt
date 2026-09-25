@@ -398,6 +398,17 @@ def migrate_security_questions():
 
     with main_db() as conn:
 
+        # Safety check - users table must exist
+        table = conn.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+            AND name = 'users'
+        """).fetchone()
+
+        if table is None:
+            return
+
         columns = _get_columns(conn, "users")
 
         if "security_q1" not in columns:
@@ -419,7 +430,6 @@ def migrate_security_questions():
             conn.execute(
                 "ALTER TABLE users ADD COLUMN security_a2 TEXT"
             )
-
 
 # ============================================================
 # EQUIPMENT TABLE MIGRATION

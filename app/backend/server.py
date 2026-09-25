@@ -23,7 +23,7 @@ from auth import (
     require_role,
 )
 from db import migrate_security_questions
-migrate_security_questions()
+# migrate_security_questions()
 
 from chatbot import chat_reply
 from seed import run_seed
@@ -152,9 +152,26 @@ class ResetPasswordRequest(BaseModel):
 
 @app.on_event("startup")
 def _startup():
+    # 1. Create users and labs tables first
     init_main_db()
+
+    # 2. Migrate main tables
+    migrate_lab_columns()
+    migrate_security_questions()
+
+    # 3. Create lab-specific tables for existing labs
+    with main_db() as conn:
+        labs = conn.execute(
+            "SELECT id FROM labs"
+        ).fetchall()
+
+    for lab in labs:
+        init_lab_db(lab["id"])
+
+    # 4. Migrate equipment tables
     migrate_equipment_columns()
-    migrate_lab_columns()  # ADD THIS
+
+    # 5. Seed default data
     run_seed()
 
 

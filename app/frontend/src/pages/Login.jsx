@@ -21,16 +21,29 @@ export default function Login() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setErr(""); setLoading(true);
+    setErr("");
+    setLoading(true);
+
     try {
       const u = await login(email, password);
-      const dest = loc.state?.from || (u.role === "ADMIN" ? "/admin" : u.role === "ASSISTANT" ? "/assistant" : "/student");
+
+      const dest =
+        loc.state?.from ||
+        (u.role === "ADMIN"
+          ? "/admin"
+          : u.role === "ASSISTANT"
+          ? "/assistant"
+          : u.role === "INCHARGE"
+          ? "/incharge"
+          : "/student");
+
       navigate(dest, { replace: true });
     } catch (e) {
       setErr(e?.response?.data?.detail || "Login failed");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
-
   return (
     <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden">
       {/* Background blobs */}

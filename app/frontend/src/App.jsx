@@ -13,6 +13,8 @@ import AssistantEquipment from "@/pages/assistant/AssistantEquipment";
 import AssistantRequests from "@/pages/assistant/AssistantRequests";
 import AssistantMaintenance from "@/pages/assistant/AssistantMaintenance";
 import AssistantLabs from "@/pages/assistant/AssistantLabs";
+import InchargeDashboard from "@/pages/incharge/InchargeDashboard";
+import InchargeLabs from "@/pages/incharge/InchargeLabs";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentLabs from "@/pages/student/StudentLabs";
 import StudentLabDetail from "@/pages/student/StudentLabDetail";
@@ -55,9 +57,9 @@ function App() {
             <Route path="/student/labs/:id" element={<RequireAuth roles={["STUDENT"]}><StudentLabDetail /></RequireAuth>} />
             <Route path="/student/borrowed" element={<RequireAuth roles={["STUDENT"]}><StudentBorrowed /></RequireAuth>} />
 
-            <Route path="/incharge" element={<RequireAuth roles={["INCHARGE"]}><AssistantLabs /></RequireAuth>} />
-<Route path="/incharge/labs" element={<RequireAuth roles={["INCHARGE"]}><AssistantLabs /></RequireAuth>} />
-<Route path="/incharge/labs/:id" element={<RequireAuth roles={["INCHARGE"]}><AssistantDashboard /></RequireAuth>} />
+            <Route path="/incharge" element={<RequireAuth roles={["INCHARGE"]}><InchargeLabs /></RequireAuth>} />
+<Route path="/incharge/labs" element={<RequireAuth roles={["INCHARGE"]}><InchargeLabs /></RequireAuth>} />
+<Route path="/incharge/labs/:id" element={<RequireAuth roles={["INCHARGE"]}><InchargeDashboard /></RequireAuth>} />
 <Route path="/incharge/labs/:id/equipment" element={<RequireAuth roles={["INCHARGE"]}><AssistantEquipment /></RequireAuth>} />
 <Route path="/incharge/labs/:id/requests" element={<RequireAuth roles={["INCHARGE"]}><AssistantRequests /></RequireAuth>} />
 <Route path="/incharge/labs/:id/maintenance" element={<RequireAuth roles={["INCHARGE"]}><AssistantMaintenance /></RequireAuth>} />

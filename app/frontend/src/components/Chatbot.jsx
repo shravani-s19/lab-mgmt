@@ -63,7 +63,6 @@ export default function Chatbot() {
             </div>
             <div>
               <div className="font-display font-bold text-[#1E293B]">CRCE Bot</div>
-              <div className="text-xs text-[#64748B]">Powered by Claude Sonnet 4.5</div>
             </div>
           </div>
           <div ref={scrollerRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">

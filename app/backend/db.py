@@ -10,9 +10,20 @@ def _connect():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not set. Add the Supabase PostgreSQL connection string in Render Environment.")
     conn = psycopg.connect(DATABASE_URL, connect_timeout=15)
+    # TEMP CHECK
+    cur = conn.cursor()
+    cur.execute("SELECT current_database(), current_user")
+    print("[DB CHECK]", cur.fetchone())
+
+    try:
+        cur.execute("SELECT id, name, db_name FROM labs ORDER BY id")
+        print("[LAB CHECK]", cur.fetchall())
+    except Exception as e:
+        print("[LAB CHECK ERROR]", e)
+        conn.rollback()
+
     conn.autocommit = False
     return conn
-
 
 @contextmanager
 def main_db():
